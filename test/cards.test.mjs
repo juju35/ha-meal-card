@@ -63,6 +63,14 @@ test("parsing: meal types, durations, servings, Mealie, calendars and Grocy", ()
   ]);
 });
 
+test("Mealie's entries come from its entities' devices, once each", () => {
+  const h = makeHass();
+  h.devices.dev_mealie2 = { config_entries: ["mealie2"] };
+  h.entities["calendar.mealie_other"] = { platform: "mealie", device_id: "dev_mealie2" };
+  assert.deepEqual(json(ml.mlMealieEntries(h, ["calendar.mealie_dinner", "calendar.mealie_lunch", "calendar.mealie_other", "calendar.cookidoo_meal_plan"])), ["mealie1", "mealie2"]);
+  assert.deepEqual(json(ml.mlMealieEntries({ entities: {} }, ["calendar.x"])), []);
+});
+
 test("aisles: the items of an aisle together, only when the descriptions read like aisles", () => {
   const items = [
     { summary: "A", description: "Produce" },
@@ -84,9 +92,10 @@ test("full card: tonight, lunch, the week as plates, the shopping list", async (
   const hass = makeHass();
   const card = await make("meal-card", {}, hass);
   const m = card._items;
-  assert.deepEqual(json(hass.ws.map((w) => w.type)), ["config_entries/get", "call_service", "todo/item/list"]);
-  assert.equal(hass.ws[1].service_data.start_date, day(-3), "this week from Monday");
-  assert.equal(hass.ws[1].service_data.end_date, day(3));
+  assert.deepEqual(json(hass.ws.map((w) => w.type)), ["call_service", "todo/item/list"], "no admin-only config_entries/get");
+  assert.equal(hass.ws[0].service_data.config_entry_id, "mealie1", "the entry of the Mealie device");
+  assert.equal(hass.ws[0].service_data.start_date, day(-3), "this week from Monday");
+  assert.equal(hass.ws[0].service_data.end_date, day(3));
   assert.deepEqual(json(hass.api.map((p) => p.split("?")[0])), ["calendars/calendar.cookidoo_meal_plan"], "Mealie's calendars are skipped once its action answered");
   assert.equal(m.state, "planned");
   assert.equal(m.tonight.name, "Lemon chicken traybake");
@@ -139,7 +148,7 @@ test("states: nothing tonight, no meal plan at all, nothing found", async () => 
 test("the next 7 days instead of the week, and an empty shopping list", async () => {
   const hass = makeHass({ items: [] });
   const card = await make("meal-card", { days: "next7" }, hass);
-  assert.equal(hass.ws[1].service_data.start_date, day(0));
+  assert.equal(hass.ws[0].service_data.start_date, day(0));
   assert.equal((card.shadowRoot.innerHTML.match(/class="day past"/g) || []).length, 0);
   assert.match(card.shadowRoot.innerHTML, /Next 7 days/);
   assert.match(card.shadowRoot.innerHTML, /stroke-dasharray="4 4"/, "next Monday: nothing planned");

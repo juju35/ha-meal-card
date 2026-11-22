@@ -36,12 +36,14 @@ export const makeHass = ({ ws = true, items = ITEMS, plan = PLAN, ...overrides }
     locale: { language: "en" },
     themes: { darkMode: false },
     entities: {
-      "calendar.mealie_dinner": { platform: "mealie" },
-      "calendar.mealie_lunch": { platform: "mealie" },
-      "todo.mealie_shopping_list": { platform: "mealie" },
+      "calendar.mealie_dinner": { platform: "mealie", device_id: "dev_mealie" },
+      "calendar.mealie_lunch": { platform: "mealie", device_id: "dev_mealie" },
+      "todo.mealie_shopping_list": { platform: "mealie", device_id: "dev_mealie" },
       "calendar.cookidoo_meal_plan": { platform: "cookidoo" },
       "sensor.grocy_meal_plan": { platform: "grocy" },
     },
+    // The Mealie device: its config entry is what get_mealplan needs (config_entries/get is for admins only).
+    devices: { dev_mealie: { config_entries: ["mealie1"] } },
     states: {
       "calendar.mealie_dinner": st("calendar.mealie_dinner", "off"),
       "calendar.mealie_lunch": st("calendar.mealie_lunch", "off"),
@@ -62,7 +64,6 @@ export const makeHass = ({ ws = true, items = ITEMS, plan = PLAN, ...overrides }
   if (ws) {
     hass.callWS = async (msg) => {
       hass.ws.push(msg);
-      if (msg.type === "config_entries/get") return [{ entry_id: "mealie1", domain: "mealie" }];
       if (msg.type === "call_service" && msg.service === "get_mealplan")
         return {
           response: {

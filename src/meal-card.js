@@ -176,24 +176,26 @@ class MealCard extends RcCard {
       const meals = [];
       const plans = this._plans();
       let mealie = false;
-      if (plans.some((id) => h.entities?.[id]?.platform === "mealie")) {
-        const entries = (await h.callWS({ type: "config_entries/get", domain: "mealie" }).catch(() => null)) || [];
-        for (const e of entries) {
-          const r = await h
+      // Mealie's entries from its entities' devices (any user can read them; config_entries/get is admin only).
+      const entries = mlMealieEntries(h, plans);
+      const answers = await Promise.all(
+        entries.map((entry) =>
+          h
             .callWS({
               type: "call_service",
               domain: "mealie",
               service: "get_mealplan",
-              service_data: { config_entry_id: e.entry_id, start_date: mlDay(start), end_date: mlDay(end) },
+              service_data: { config_entry_id: entry, start_date: mlDay(start), end_date: mlDay(end) },
               return_response: true,
             })
-            .catch(() => null);
-          if (r?.response) {
-            mealie = true;
-            meals.push(...mlFromMealie(r.response, e.entry_id));
-          }
-        }
-      }
+            .catch(() => null),
+        ),
+      );
+      answers.forEach((r, i) => {
+        if (!r?.response) return;
+        mealie = true;
+        meals.push(...mlFromMealie(r.response, entries[i]));
+      });
       if (h.callApi)
         for (const id of plans.filter((x) => x.startsWith("calendar.") && !(mealie && h.entities?.[x]?.platform === "mealie"))) {
           const evs = await h.callApi("GET", `calendars/${id}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`).catch(() => null);

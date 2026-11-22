@@ -460,6 +460,12 @@ const mlPlans = (hass) =>
     return id.startsWith("calendar.") || (id.startsWith("sensor.") && /meal/.test(id));
   });
 
+// Mealie's config entries, from the devices of the Mealie entities among `plans` (read by any user, unlike
+// config_entries/get): one get_mealplan call each.
+const mlMealieEntries = (hass, plans) => [
+  ...new Set(plans.filter((id) => hass.entities?.[id]?.platform === "mealie").flatMap((id) => hass.devices?.[hass.entities[id].device_id]?.config_entries || [])),
+];
+
 // The shopping list of the home: a to-do list of a shopping integration, one named like a shopping list first.
 const mlShopping = (hass) => {
   const lists = Object.keys(hass.entities || {}).filter((id) => id.startsWith("todo.") && ML_SHOP_PLATFORMS.includes(hass.entities[id].platform));

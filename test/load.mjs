@@ -109,7 +109,7 @@ export const load = ({ now } = {}) => {
   const code = [read("shared"), ...cards.map((c) => `{\n${read(c)}}\n`)].join("\n");
   return vm.runInContext(
     `${code}
-    ({ RcCard, RC_I18N, ML_I18N, rcLang, mlType, mlDay, mlMinutes, mlServings, mlPlans, mlShopping, mlFromEvent, mlFromMealie, mlFromGrocy, mlAisles, customElements, window,
+    ({ RcCard, RC_I18N, ML_I18N, rcLang, mlMealieEntries, mlType, mlDay, mlMinutes, mlServings, mlPlans, mlShopping, mlFromEvent, mlFromMealie, mlFromGrocy, mlAisles, customElements, window,
        cards: Object.fromEntries(${JSON.stringify([...cards, "meal-mini-card"])}.map((t) => [t, customElements.get(t)])) })`,
     ctx,
   );

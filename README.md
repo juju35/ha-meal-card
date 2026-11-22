@@ -148,7 +148,7 @@ type: custom:meal-mini-card
 ## How it works
 
 - **Meal plan**: `meal_plan`, else the home's Mealie and Cookidoo calendars and Grocy meal plan sensor
-- **Mealie**: its `mealie.get_mealplan` action for the days shown (each Mealie entry), with the recipes' total time and servings; its calendars are then skipped. Without the action's answer, its calendars are read like any other
+- **Mealie**: its `mealie.get_mealplan` action for the days shown (each Mealie entry, found from its entities' devices, so any user, admin or not, gets it), with the recipes' total time and servings; its calendars are then skipped. Without the action's answer, its calendars are read like any other
 - **Calendars**: their events of the days shown (`calendars/<entity>`); the calendar's id or the event's summary says the meal type (*breakfast*, *lunch*, *dinner*, *side*, in several languages), dinner otherwise
 - **Grocy**: the `meals` attribute of its meal plan sensor (recipe, product or note, the section as the meal type)
 - **Shopping list**: `shopping_list`, else the first to-do list of Mealie, Bring!, OurGroceries, KitchenOwl, Grocy, Cookidoo or the Shopping list integration (one named like a shopping list first); its items (`todo/item/list`), sorted by aisle when their descriptions read like aisles (short words shared by several items); a tap calls `todo.update_item` (`completed` / `needs_action`)
