@@ -449,7 +449,7 @@ class MealCard extends RcCard {
     :host { --ml-plate: #ffffff; --ml-plate-in: #fbf3ea; --ml-line: #ead7c3; --ml-check: #ffffff; --ml-acc: #f76707; }
     ha-card.dk { --ml-plate: #2b2f34; --ml-plate-in: #34383e; --ml-line: #4a4f56; --ml-check: #1c1c1c; }
     ha-card.lvl-planned { --c: #f76707; }
-    ha-card.lvl-unplanned { --c: #e8590c; }
+    ha-card.lvl-unplanned { --c: #f59f00; }
     ha-card.lvl-empty, ha-card.lvl-none { --c: var(--rc-idle); }
     .tt { flex: 1 1 0; min-width: 5ch; display: flex; flex-direction: column; }
     .tt .title { flex: none; }
