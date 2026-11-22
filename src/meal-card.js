@@ -196,17 +196,20 @@ class MealCard extends RcCard {
         mealie = true;
         meals.push(...mlFromMealie(r.response, entries[i]));
       });
-      if (h.callApi)
-        for (const id of plans.filter((x) => x.startsWith("calendar.") && !(mealie && h.entities?.[x]?.platform === "mealie"))) {
-          const evs = await h.callApi("GET", `calendars/${id}?start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`).catch(() => null);
-          for (const ev of evs || []) {
-            const m = mlFromEvent(ev, id);
-            if (m) meals.push(m);
-          }
-        }
+      const range = `start=${encodeURIComponent(start.toISOString())}&end=${encodeURIComponent(end.toISOString())}`;
+      const calendars = h.callApi ? plans.filter((x) => x.startsWith("calendar.") && !(mealie && h.entities?.[x]?.platform === "mealie")) : [];
       const shop = this._shoppingId();
-      let items = null;
-      if (shop) items = (await h.callWS({ type: "todo/item/list", entity_id: shop }).catch(() => null))?.items || null;
+      const [events, list] = await Promise.all([
+        Promise.all(calendars.map((id) => h.callApi("GET", `calendars/${id}?${range}`).catch(() => null))),
+        shop ? h.callWS({ type: "todo/item/list", entity_id: shop }).catch(() => null) : null,
+      ]);
+      events.forEach((evs, i) => {
+        for (const ev of evs || []) {
+          const m = mlFromEvent(ev, calendars[i]);
+          if (m) meals.push(m);
+        }
+      });
+      const items = list?.items || null;
       this._ws = { meals, items, shop, day: mlDay(now), todo: h.states[shop]?.state, at: now };
     } finally {
       this._busy = false;
