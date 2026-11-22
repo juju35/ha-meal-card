@@ -11,9 +11,9 @@
 <p align="center"><img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/icon.svg" alt="Meal Card" width="120"></p>
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="36">&nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/grocy.png" alt="Grocy" height="24">&nbsp;&nbsp;
-  <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/kitchenowl.png" alt="KitchenOwl" height="36">&nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/kitchenowl.png" alt="KitchenOwl" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/cookidoo.png" alt="Cookidoo" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/bring.png" alt="Bring!" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/ourgroceries.png" alt="OurGroceries" height="24">
@@ -48,9 +48,9 @@ The card reads the meal plans of these integrations (Mealie's meal plan action, 
 
 | | Integration | What the cards show |
 |:---:|---|---|
-| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="24"> | [Mealie](https://www.home-assistant.io/integrations/mealie/) (built in) | Meal plan, recipes and shopping lists |
+| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="16"> | [Mealie](https://www.home-assistant.io/integrations/mealie/) (built in) | Meal plan, recipes and shopping lists |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/grocy.png" alt="Grocy" height="16"> | [Grocy](https://github.com/custom-components/grocy) (Marketplace) | Meal plan, stock and shopping list |
-| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/kitchenowl.png" alt="KitchenOwl" height="24"> | [KitchenOwl](https://github.com/TomBursch/kitchenowl-ha) (Marketplace) | Shopping list |
+| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/kitchenowl.png" alt="KitchenOwl" height="16"> | [KitchenOwl](https://github.com/TomBursch/kitchenowl-ha) (Marketplace) | Shopping list |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/cookidoo.png" alt="Cookidoo" height="16"> | [Cookidoo](https://www.home-assistant.io/integrations/cookidoo/) (built in) | Thermomix recipes, calendar and shopping list |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/bring.png" alt="Bring!" height="16"> | [Bring!](https://www.home-assistant.io/integrations/bring/) (built in) | Shopping list |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/ourgroceries.png" alt="OurGroceries" height="16"> | [OurGroceries](https://www.home-assistant.io/integrations/ourgroceries/) (built in) | Shopping list |
