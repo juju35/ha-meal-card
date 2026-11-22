@@ -45,7 +45,6 @@ export const pageScript = () => `(() => {
   };
   window.__ws = async function (msg) {
     const d = this.__mock || {};
-    if (msg.type === "config_entries/get") return [{ entry_id: "mealie1", domain: "mealie" }];
     if (msg.type === "call_service" && msg.service === "get_mealplan") return { response: { mealplan: d.plan } };
     if (msg.type === "todo/item/list") return { items: d.items };
     return null;
@@ -63,11 +62,13 @@ export const setup = (s) => {
       language: "en",
       locale: { language: "en" },
       entities: {
-        "calendar.mealie_dinner": { entity_id: "calendar.mealie_dinner", platform: "mealie" },
-        "calendar.mealie_lunch": { entity_id: "calendar.mealie_lunch", platform: "mealie" },
-        "todo.mealie_shopping_list": { entity_id: "todo.mealie_shopping_list", platform: "mealie" },
+        "calendar.mealie_dinner": { entity_id: "calendar.mealie_dinner", platform: "mealie", device_id: "dev_mealie" },
+        "calendar.mealie_lunch": { entity_id: "calendar.mealie_lunch", platform: "mealie", device_id: "dev_mealie" },
+        "todo.mealie_shopping_list": { entity_id: "todo.mealie_shopping_list", platform: "mealie", device_id: "dev_mealie" },
         "calendar.cookidoo_meal_plan": { entity_id: "calendar.cookidoo_meal_plan", platform: "cookidoo" },
       },
+      // The Mealie device: its config entry is what get_mealplan needs.
+      devices: { dev_mealie: { id: "dev_mealie", config_entries: ["mealie1"] } },
       states: {
         "calendar.mealie_dinner": st("calendar.mealie_dinner", "off"),
         "calendar.mealie_lunch": st("calendar.mealie_lunch", "off"),
