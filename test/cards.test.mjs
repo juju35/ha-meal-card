@@ -43,6 +43,8 @@ test("parsing: meal types, durations, servings, Mealie, calendars and Grocy", ()
   assert.equal(ml.mlType("calendar.mealie_lunch"), "lunch");
   assert.equal(ml.mlType("Petit-déjeuner"), "breakfast");
   assert.equal(ml.mlType("anything"), "dinner");
+  assert.equal(ml.mlType("calendar.middag"), "dinner", "middag is dinner in Danish, Norwegian and Swedish");
+  assert.equal(ml.mlType("Lunsj"), "lunch");
   assert.equal(ml.mlMinutes("PT1H15M"), 75);
   assert.equal(ml.mlMinutes("45 min"), 45);
   assert.equal(ml.mlMinutes("1 h 15"), 75);

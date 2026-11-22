@@ -421,9 +421,9 @@ const ML_SHOP_PLATFORMS = ["mealie", "bring", "ourgroceries", "kitchenowl", "gro
 const mlType = (text, fallback = "dinner") => {
   const t = String(text || "").toLowerCase();
   if (/breakfast|petit.?d[ée]j|fr[üu]hst[üu]ck|desayuno|colazione|ontbijt|śniadanie/.test(t)) return "breakfast";
-  if (/lunch|d[ée]jeuner|mittag|almuerzo|comida|pranzo|obiad|middag/.test(t)) return "lunch";
+  if (/lunch|d[ée]jeuner|mittag|almuerzo|comida|pranzo|obiad|lunsj/.test(t)) return "lunch";
   if (/\bside|accompagnement|beilage/.test(t)) return "side";
-  if (/dinner|d[îi]ner|supper|abend|cena|souper|kolacja|avondeten/.test(t)) return "dinner";
+  if (/dinner|d[îi]ner|supper|abend|cena|souper|kolacja|avondeten|middag|aftensmad/.test(t)) return "dinner";
   return fallback;
 };
 
