@@ -209,6 +209,24 @@ test("the dark theme darkens the plates and the kitchen", async () => {
   assert.match(card.shadowRoot.innerHTML, /class="banner night"/);
 });
 
+test("plurals: one, two, few and many, by language", () => {
+  const t = { en: { x_one: "{n} item", x_many: "{n} items" }, fr: { x_one: "{n} article", x_many: "{n} articles" }, sl: { x_one: "{n} kos", x_two: "{n} kosa", x_few: "{n} kosi", x_many: "{n} kosov" }, pl: { x_one: "{n} rzecz", x_few: "{n} rzeczy", x_many: "{n} rzeczy" }, sr: { x_one: "{n} ствар", x_few: "{n} ствари", x_many: "{n} ствари" } };
+  const k = (lang, n) => ml.rcPluralKey(t, lang, "x", n);
+  assert.deepEqual([k("en", 1), k("en", 2), k("en", 0)], ["x_one", "x_many", "x_many"]);
+  assert.deepEqual([k("fr", 0), k("fr", 1), k("fr", 2)], ["x_one", "x_one", "x_many"], "French: 0 and 1 are singular");
+  assert.deepEqual([k("sl", 1), k("sl", 2), k("sl", 3), k("sl", 5), k("sl", 102)], ["x_one", "x_two", "x_few", "x_many", "x_two"], "Slovenian dual");
+  assert.equal(ml.rcPluralKey({ sl: { x_one: "", x_few: "", x_many: "" } }, "sl", "x", 2), "x_few", "no dual: the few form");
+  assert.deepEqual([k("pl", 2), k("pl", 5), k("pl", 22)], ["x_few", "x_many", "x_few"]);
+  assert.equal(k("sr", 21), "x_one");
+});
+
+test("the counts agree with their number", async () => {
+  const one = await make("meal-card", { language: "fr" }, makeHass({ items: [{ uid: "1", summary: "Pain", status: "needs_action" }] }));
+  assert.match(one.shadowRoot.innerHTML, /<span class="cnt">1 restant<\/span>/);
+  const two = await make("meal-card", { language: "fr" }, makeHass({ items: [{ uid: "1", summary: "Pain", status: "needs_action" }, { uid: "2", summary: "Lait", status: "needs_action" }] }));
+  assert.match(two.shadowRoot.innerHTML, /<span class="cnt">2 restants<\/span>/);
+});
+
 test("translations: every language has every English key", () => {
   const en = Object.keys(ml.ML_I18N.en);
   for (const [lang, table] of Object.entries(ml.ML_I18N)) assert.deepEqual(en.filter((k) => !(k in table)), [], lang);

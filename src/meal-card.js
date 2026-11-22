@@ -354,7 +354,7 @@ class MealCard extends RcCard {
   _meta(meal) {
     const parts = [];
     if (meal.minutes != null) parts.push(`<span>${mlIcon(ML_SVG.clock)}${rcEsc(this._dur(meal.minutes))}</span>`);
-    if (meal.servings != null) parts.push(`<span>${mlIcon(ML_SVG.people)}${rcEsc(this._t("servings", { n: meal.servings }))}</span>`);
+    if (meal.servings != null) parts.push(`<span>${mlIcon(ML_SVG.people)}${rcEsc(this._tn("servings", meal.servings))}</span>`);
     return parts.length ? `<span class="meta">${parts.join("")}</span>` : "";
   }
 
@@ -385,7 +385,7 @@ class MealCard extends RcCard {
   // The shopping list to tick off: what is left first (by aisle when the items carry one), then what was bought.
   _shopping(m) {
     if (this._config.show_shopping === false || !m.shop || !m.items) return "";
-    const head = `<div class="bh">${mlIcon(ML_SVG.cart)}<span>${rcEsc(this._t("shopping"))}</span>${m.items.length ? `<span class="cnt">${rcEsc(this._t("left", { n: m.open }))}</span>` : ""}</div>`;
+    const head = `<div class="bh">${mlIcon(ML_SVG.cart)}<span>${rcEsc(this._t("shopping"))}</span>${m.items.length ? `<span class="cnt">${rcEsc(this._tn("left", m.open))}</span>` : ""}</div>`;
     if (!m.items.length) return `<div class="box sh">${head}<div class="nothing">${rcEsc(this._t("nothing_to_buy"))}</div></div>`;
     const row = (i) => {
       const done = i.status === "completed";
@@ -618,7 +618,7 @@ class MealMiniCard extends rcMini(MealCard, "meal-mini-card", "") {
       ? chip(this._t("none"))
       : [
           m.tonight ? chip(this._t("chip_tonight", { v: m.tonight.name })) : m.tomorrow ? chip(this._t("tomorrow_meal", { v: m.tomorrow.name })) : "",
-          m.items ? chip(m.open ? this._t("to_buy", { n: m.open }) : this._t("nothing_to_buy"), " acc") : "",
+          m.items ? chip(m.open ? this._tn("to_buy", m.open) : this._t("nothing_to_buy"), " acc") : "",
         ].join("");
     const c = this._config;
     this.shadowRoot.innerHTML = `<style>${RC_BASE_STYLES}${this.constructor.styles}</style>
