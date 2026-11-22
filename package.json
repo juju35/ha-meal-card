@@ -1,0 +1,27 @@
+{
+  "name": "ha-meal-card",
+  "version": "1.0.0",
+  "description": "A Lovelace card for Home Assistant's meal plans and shopping lists: tonight's dinner, the week as plates, and the shopping list to tick off.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/juju35/ha-meal-card.git"
+  },
+  "bugs": {
+    "url": "https://github.com/juju35/ha-meal-card/issues"
+  },
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "check": "node scripts/build.mjs && node --check dist/ha-meal-card.js",
+    "test": "node --test test/*.test.mjs",
+    "screenshots": "npm run build && node scripts/screenshots/meal.mjs && node scripts/screenshots/animations.mjs"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@mdi/js": "^7.4.47",
+    "acorn": "^8.19.0",
+    "css-tree": "^3.2.1",
+    "playwright": "^1.64.1"
+  }
+}
