@@ -10,6 +10,9 @@ const ML_ICONS = { planned: "mdi:silverware-fork-knife", unplanned: "mdi:silverw
 const ML_LOOP = 3;
 // How often the meal plan and the shopping list are fetched again (ms), and at each new day.
 const ML_REFRESH = 10 * 60 * 1000;
+// A shopping item ticked off shows as such at once, until the list reports it (or for this long); back as it was
+// when the action fails.
+const ML_OPTIMISTIC = 8000;
 // The colours a plate's food is drawn with, picked from the dish's name.
 const ML_FOOD = ["#f59f00", "#e8590c", "#7cb87a", "#ffd43b", "#e03131", "#ffa94d", "#c2410c", "#74c0fc", "#a9e34b", "#f783ac"];
 
@@ -261,7 +264,7 @@ class MealCard extends RcCard {
       const day = byDay.get(k) || {};
       return { t: d, key: k, today: k === today, past: k < today, main: day.dinner || day.lunch || day.breakfast || day.side || null, meals: ML_TYPES.map((type) => day[type]).filter(Boolean) };
     });
-    const items = ws?.items || null;
+    const items = this._overlay(ws?.items || null, now);
     const open = items ? items.filter((i) => i.status !== "completed") : [];
     const done = items ? items.filter((i) => i.status === "completed") : [];
     const limit = Math.max(1, Number(c.shopping_limit) || 8);
@@ -282,6 +285,17 @@ class MealCard extends RcCard {
       shown,
       plan: plans[0] || null,
     };
+  }
+
+  // The shopping items with the ticks not reported yet by the list (for ML_OPTIMISTIC at most).
+  _overlay(items, now) {
+    const asked = this._asked;
+    if (!items || !asked?.size) return items;
+    for (const [uid, a] of asked) {
+      const item = items.find((i) => i.uid === uid);
+      if (!item || item.status === a.status || now - a.at > ML_OPTIMISTIC) asked.delete(uid);
+    }
+    return items.map((i) => (asked.has(i.uid) ? { ...i, status: asked.get(i.uid).status } : i));
   }
 
   _dark() {
@@ -415,11 +429,19 @@ class MealCard extends RcCard {
         const item = m?.items?.find((i) => i.uid === b.dataset.uid);
         if (!item) return;
         const status = item.status === "completed" ? "needs_action" : "completed";
-        // Shown at once; the list is fetched again when the to-do list reports the change.
-        item.status = status;
-        this._sig = null;
-        this._render();
-        rcCall(this._hass, "todo", "update_item", { entity_id: m.shop, item: item.uid, status });
+        // Shown at once; the list is fetched again when the to-do list reports the change, and the tick is undone
+        // when the action fails.
+        const asked = (this._asked ||= new Map());
+        asked.set(item.uid, { status, at: Date.now() });
+        const redraw = () => {
+          this._sig = null;
+          this._render();
+        };
+        redraw();
+        Promise.resolve(this._hass.callService("todo", "update_item", { entity_id: m.shop, item: item.uid, status })).catch(() => {
+          asked.delete(item.uid);
+          redraw();
+        });
       });
   }
 

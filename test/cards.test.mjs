@@ -133,6 +133,24 @@ test("ticking an item calls todo.update_item, shown at once", async () => {
   assert.equal(card._items.open, 4);
 });
 
+test("a tick that fails is undone; one the list never reports is undone after a while", async () => {
+  const hass = makeHass();
+  hass.callService = () => Promise.reject(new Error("unavailable"));
+  const card = await make("meal-card", {}, hass);
+  const buttons = [{ dataset: { uid: "1" }, addEventListener(_type, fn) { this.fn = fn; } }];
+  card.shadowRoot.querySelectorAll = (s) => (s === ".it[data-uid]" ? buttons : []);
+  card._bindAfter(card.shadowRoot);
+  buttons[0].fn();
+  assert.equal(card._items.open, 4, "shown at once");
+  await settle();
+  assert.equal(card._items.open, 5, "back as it was");
+  card._asked.set("2", { status: "completed", at: NOW - 9000 });
+  card._sig = null;
+  card._render();
+  assert.equal(card._items.open, 5, "never reported: the list's own status after 8 s");
+  assert.equal(card._asked.size, 0);
+});
+
 test("the shopping list is fetched again when an item changes, even with as many left", async () => {
   const hass = makeHass();
   const card = await make("meal-card", {}, hass);
