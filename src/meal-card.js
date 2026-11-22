@@ -210,7 +210,7 @@ class MealCard extends RcCard {
         }
       });
       const items = list?.items || null;
-      this._ws = { meals, items, shop, day: mlDay(now), todo: h.states[shop]?.state, at: now };
+      this._ws = { meals, items, shop, day: mlDay(now), todo: mlListSig(h.states[shop]), at: now };
     } finally {
       this._busy = false;
     }
@@ -239,8 +239,9 @@ class MealCard extends RcCard {
     const now = Date.now();
     const ws = this._ws;
     const shop = this._shoppingId();
-    // Fetched at first, every ML_REFRESH, at each new day, and when the shopping list changes.
-    if (h.callWS && !this._busy && (!ws || ws.day !== mlDay(now) || ws.shop !== shop || ws.todo !== h.states[shop]?.state)) this._fetch();
+    // Fetched at first, every ML_REFRESH, at each new day, and when the shopping list changes (an item added, ticked,
+    // renamed or moved to another aisle: its state or its last update).
+    if (h.callWS && !this._busy && (!ws || ws.day !== mlDay(now) || ws.shop !== shop || ws.todo !== mlListSig(h.states[shop]))) this._fetch();
     const plans = this._plans();
     const meals = [...(ws?.meals || [])];
     for (const id of plans.filter((x) => x.startsWith("sensor."))) meals.push(...mlFromGrocy(h.states[id]));

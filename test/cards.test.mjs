@@ -133,6 +133,20 @@ test("ticking an item calls todo.update_item, shown at once", async () => {
   assert.equal(card._items.open, 4);
 });
 
+test("the shopping list is fetched again when an item changes, even with as many left", async () => {
+  const hass = makeHass();
+  const card = await make("meal-card", {}, hass);
+  const lists = () => hass.ws.filter((w) => w.type === "todo/item/list").length;
+  const before = lists();
+  card.hass = { ...hass, states: { ...hass.states } };
+  await settle();
+  assert.equal(lists(), before, "nothing changed: no fetch");
+  const shop = hass.states["todo.mealie_shopping_list"];
+  card.hass = { ...hass, states: { ...hass.states, "todo.mealie_shopping_list": { ...shop, last_updated: "2026-06-25T17:59:00Z" } } };
+  await settle();
+  assert.equal(lists(), before + 1, "an item renamed: same count, a new last update");
+});
+
 test("states: nothing tonight, no meal plan at all, nothing found", async () => {
   const unplanned = await make("meal-card", {}, makeHass({ plan: [[1, "dinner", "Pizza", "", ""]] }));
   assert.equal(unplanned._items.state, "unplanned");

@@ -466,6 +466,9 @@ const mlMealieEntries = (hass, plans) => [
   ...new Set(plans.filter((id) => hass.entities?.[id]?.platform === "mealie").flatMap((id) => hass.devices?.[hass.entities[id].device_id]?.config_entries || [])),
 ];
 
+// What says that a to-do list changed: its state (the items left) and its last update (an item renamed or moved).
+const mlListSig = (st) => (st ? `${st.state}|${st.last_updated ?? ""}` : "");
+
 // The shopping list of the home: a to-do list of a shopping integration, one named like a shopping list first.
 const mlShopping = (hass) => {
   const lists = Object.keys(hass.entities || {}).filter((id) => id.startsWith("todo.") && ML_SHOP_PLATFORMS.includes(hass.entities[id].platform));
