@@ -5,7 +5,7 @@
  */
 
 // The badge's icon of each state (its colour is the stylesheet's).
-const ML_ICONS = { planned: "mdi:silverware-fork-knife", unplanned: "mdi:silverware-fork-knife", empty: "mdi:silverware-fork-knife", none: "mdi:silverware-fork-knife" };
+const ML_ICONS = { planned: "mdi:silverware-fork-knife", unplanned: "mdi:silverware-fork-knife", empty: "mdi:silverware-fork-knife" };
 // One loop of the banner's animation (s): the steam rises from the pot while a dinner is planned.
 const ML_LOOP = 3;
 // How often the meal plan and the shopping list are fetched again (ms), and at each new day.
@@ -270,9 +270,10 @@ class MealCard extends RcCard {
     const limit = Math.max(1, Number(c.shopping_limit) || 8);
     const shown = [...mlAisles(open), ...done].slice(0, limit);
     const any = plans.length > 0 || !!shop;
-    const state = !any ? "none" : t.dinner ? "planned" : byDay.size ? "unplanned" : "empty";
+    // Nothing found at all is the empty state too (idle grey), with its own message.
+    const state = !any || !(t.dinner || byDay.size) ? "empty" : t.dinner ? "planned" : "unplanned";
     return {
-      none: state === "none",
+      none: !any,
       state,
       name: c.title || this._t("title"),
       tonight: t.dinner || null,
@@ -396,7 +397,7 @@ class MealCard extends RcCard {
 
   _draw(m) {
     const c = this._config;
-    const status = this._t(`st_${m.state === "none" ? "empty" : m.state}`);
+    const status = this._t(`st_${m.state}`);
     const parts = [m.state, m.tonight, m.lunch, m.tomorrow, m.days, m.shown, m.open, this._night(), this._dark()];
     if (!this._changed(parts)) return;
     const sub = this._sub(m);
@@ -410,7 +411,7 @@ class MealCard extends RcCard {
           </div>`;
     const dk = this._dark() ? " dk" : "";
     if (m.none) {
-      this._paint("none", `${head}<div class="box nothing">${rcEsc(this._t("none"))}</div>`, "", dk);
+      this._paint("empty", `${head}<div class="box nothing">${rcEsc(this._t("none"))}</div>`, "", dk);
       this._fitPill();
       return;
     }
@@ -450,7 +451,7 @@ class MealCard extends RcCard {
     ha-card.dk { --ml-plate: #2b2f34; --ml-plate-in: #34383e; --ml-line: #4a4f56; --ml-check: #1c1c1c; }
     ha-card.lvl-planned { --c: #f76707; }
     ha-card.lvl-unplanned { --c: #f59f00; }
-    ha-card.lvl-empty, ha-card.lvl-none { --c: var(--rc-idle); }
+    ha-card.lvl-empty { --c: var(--rc-idle); }
     .tt { flex: 1 1 0; min-width: 5ch; display: flex; flex-direction: column; }
     .tt .title { flex: none; }
     .subt { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -512,8 +513,8 @@ class MealCard extends RcCard {
               background: linear-gradient(180deg, #fbf3ea 0%, #f5e6d6 100%);
               --bt: #0d2a45; --bs: #3b5b78; --ic: color-mix(in srgb, var(--c) 85%, #10283f); --sw: min(200px, 56%); }
     .banner.night { background: linear-gradient(180deg, #2a2d32 0%, #23262a 100%); --bt: #fff; --bs: rgba(255,255,255,.78); --ic: color-mix(in srgb, var(--c) 72%, #fff); }
-    .lvl-empty .banner, .lvl-none .banner { --ic: #6b7680; }
-    .lvl-empty .banner.night, .lvl-none .banner.night { --ic: #a7b0b8; }
+    .lvl-empty .banner { --ic: #6b7680; }
+    .lvl-empty .banner.night { --ic: #a7b0b8; }
     .banner .head { position: relative; z-index: 1; flex: 1; min-width: 0; height: 80px; box-sizing: border-box;
                     padding: 0 calc(var(--sw) + 4px) 0 14px; flex-wrap: nowrap; }
     .banner .head::after { content: none; }
@@ -611,7 +612,7 @@ class MealMiniCard extends rcMini(MealCard, "meal-mini-card", "") {
   _drawMini(m) {
     const night = this._night();
     if (!this._changed(["mini", m.state, m.tonight?.name, m.tomorrow?.name, m.open, !!m.items, night, this._dark()])) return;
-    const status = this._t(`st_${m.state === "none" ? "empty" : m.state}`);
+    const status = this._t(`st_${m.state}`);
     const chip = (text, cls = "") => `<button class="r${cls}" title="${rcEsc(text)}"><span>${rcEsc(text)}</span></button>`;
     const chips = m.none
       ? chip(this._t("none"))

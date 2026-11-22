@@ -175,7 +175,9 @@ test("states: nothing tonight, no meal plan at all, nothing found", async () => 
   const empty = await make("meal-card", { meal_plan: ["calendar.mealie_dinner"] }, makeHass({ plan: [] }));
   assert.equal(empty._items.state, "empty");
   const none = await make("meal-card", {}, { ...makeHass({ ws: false }), entities: {}, states: {} });
-  assert.equal(none._items.state, "none");
+  assert.equal(none._items.state, "empty");
+  assert.ok(none._items.none);
+  assert.match(none.shadowRoot.innerHTML, /lvl-empty/);
   assert.match(none.shadowRoot.innerHTML, /No meal plan or shopping list found/);
 });
 
