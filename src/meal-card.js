@@ -568,7 +568,7 @@ class MealCard extends RcCard {
     @container (max-width: 260px) { .banner, ha-card.bn > .banner { --sw: 70px; --sk: .5; } }
     /* The chips that do not fit wrap to a second line, hidden: never a chip cut to "R…". */
     .banner .rs { display: flex; flex-wrap: wrap; gap: 4px; height: 20px; margin: 3px 0 0 -2px; min-width: 0; overflow: hidden; }
-    .banner .r { flex: none; max-width: 100%; line-height: 20px; padding: 0 7px; color: var(--bt); background: rgba(255,255,255,.62); }
+    .banner .r { flex: none; max-width: 100%; line-height: 20px; padding: 0 7px; color: var(--bt); background: rgba(255,255,255,.62); cursor: default; }
     .banner .r.acc { color: color-mix(in srgb, var(--ml-acc) 60%, #10283f); background: color-mix(in srgb, var(--ml-acc) 16%, rgba(255,255,255,.7)); }
     .banner.night .r { background: rgba(10,20,40,.4); }
     .banner.night .r.acc { color: color-mix(in srgb, var(--ml-acc) 45%, #fff); background: color-mix(in srgb, var(--ml-acc) 22%, rgba(10,20,40,.5)); }
@@ -613,7 +613,7 @@ class MealMiniCard extends rcMini(MealCard, "meal-mini-card", "") {
     const night = this._night();
     if (!this._changed(["mini", m.state, m.tonight?.name, m.tomorrow?.name, m.open, !!m.items, night, this._dark()])) return;
     const status = this._t(`st_${m.state}`);
-    const chip = (text, cls = "") => `<button class="r${cls}" title="${rcEsc(text)}"><span>${rcEsc(text)}</span></button>`;
+    const chip = (text, cls = "") => `<span class="r${cls}" title="${rcEsc(text)}"><span>${rcEsc(text)}</span></span>`;
     const chips = m.none
       ? chip(this._t("none"))
       : [
