@@ -27,6 +27,14 @@ const ITEMS = [
   ["Quinoa", "Pantry", false],
 ].map(([summary, description, done], i) => ({ uid: String(i + 1), summary, description, status: done ? "completed" : "needs_action" }));
 
+// Mealie's recipes, for the editing popup's search.
+const RECIPES = [
+  ["Chickpea curry", "PT40M"],
+  ["Lemon chicken traybake", "PT45M"],
+  ["Mushroom risotto", "PT35M"],
+  ["Ratatouille", "PT50M"],
+].map(([name, total_time], i) => ({ recipe_id: `c${i}`, name, total_time }));
+
 // `scene`: planned (a dinner tonight), unplanned (nothing tonight, the week still planned), done (everything bought).
 const SCENES = {
   planned: { plan: PLAN, items: ITEMS },
@@ -46,6 +54,7 @@ export const pageScript = () => `(() => {
   window.__ws = async function (msg) {
     const d = this.__mock || {};
     if (msg.type === "call_service" && msg.service === "get_mealplan") return { response: { mealplan: d.plan } };
+    if (msg.type === "call_service" && msg.service === "get_recipes") return { response: { recipes: { items: d.recipes } } };
     if (msg.type === "todo/item/list") return { items: d.items };
     return null;
   };
@@ -76,7 +85,8 @@ export const setup = (s) => {
         "calendar.cookidoo_meal_plan": st("calendar.cookidoo_meal_plan", "off"),
       },
       __mock: {
-        plan: v.plan.map(([off, type, name, time, yieldText]) => ({ mealplan_date: day(off), entry_type: type, title: "", recipe: { name, total_time: time, recipe_yield: yieldText } })),
+        plan: v.plan.map(([off, type, name, time, yieldText], i) => ({ mealplan_id: i + 1, mealplan_date: day(off), entry_type: type, title: "", recipe: { recipe_id: `r${i}`, name, total_time: time, recipe_yield: yieldText } })),
+        recipes: RECIPES,
         items: v.items,
         cookidoo: [{ summary: "Thermomix bread", start: { date: day(2) }, end: { date: day(3) } }],
       },

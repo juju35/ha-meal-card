@@ -38,6 +38,7 @@ A Lovelace card for **the week's meal plan** and the **shopping list**: tonight'
 - **Today's lunch** on a line, with its time
 - **The week as plates**: Monday to Sunday (or the next 7 days), a plate per day, today marked, the past faded, a dashed plate when nothing is planned; hover a day for its meals; tomorrow's dinner under it
 - **The shopping list to tick off**: what is left to buy first, by aisle when the items carry one, then what was bought, struck through; a tap ticks an item off (or puts it back) on the to-do list
+- **Edit the meal plan (Mealie)**: tap a day of the week, then a meal: search a recipe, type a note, take the meal before as leftovers, pick a random recipe, or clear it; Mealie's actions do the change
 - **Illustrated header**: a kitchen corner whose pot steams while a dinner is planned tonight; the dark theme darkens it
 - **Mini card**: the state, tonight's dinner and what is left to buy; its zoom button opens the full card in place
 - Visual editor for both cards, light and dark themes, 22 languages, no external dependency
@@ -111,6 +112,7 @@ type: custom:meal-mini-card
 | `show_week` | boolean | `true` | The week as plates |
 | `show_shopping` | boolean | `true` | The shopping list |
 | `shopping_limit` | number | `8` | How many items of the shopping list are shown |
+| `edit` | boolean | `true` | Both: with Mealie, a tap on a day of the week opens the editing popup (`false`: read only) |
 | `illustration` | boolean | `true` | Both: the illustrated header (`false`: the classic header) |
 | `illustration_theme` | string | `auto` | Both: `auto` (follows the Home Assistant theme: night with a dark theme, day with a light theme), `day` or `night` |
 | `animations` | boolean | `true` | Both: the steam over the pot |
@@ -127,6 +129,13 @@ type: custom:meal-mini-card
 | Narrow | Dark |
 |---|---|
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/screenshots/ml-narrow.png" alt="Narrow" width="300"> | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/screenshots/ml-narrow-dark.png" alt="Narrow, dark" width="300"> |
+
+**Editing (Mealie)**: a day of the week opens its meals; a meal opens the recipe search, with the leftovers and random shortcuts.
+
+| A day's meals | A recipe for dinner |
+|---|---|
+| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/screenshots/ml-edit-day.png" alt="Editing a day" width="400"> | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/screenshots/ml-edit-recipe.png" alt="Searching a recipe" width="400"> |
+| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/screenshots/ml-edit-day-dark.png" alt="Editing a day, dark" width="400"> | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/screenshots/ml-edit-recipe-dark.png" alt="Searching a recipe, dark" width="400"> |
 
 **Cooking animation**: the steam rises from the pot while a dinner is planned tonight (still with `animations: false`, or when the system asks for reduced motion).
 
@@ -153,7 +162,8 @@ type: custom:meal-mini-card
 - **Grocy**: the `meals` attribute of its meal plan sensor (recipe, product or note, the section as the meal type)
 - **Shopping list**: `shopping_list`, else the first to-do list of Mealie, Bring!, OurGroceries, KitchenOwl, Grocy, Cookidoo or the Shopping list integration (one named like a shopping list first); its items (`todo/item/list`), sorted by aisle when their descriptions read like aisles (short words shared by several items); a tap calls `todo.update_item` (`completed` / `needs_action`), shown at once until the list reports it (8 seconds at most) and undone if the action fails
 - **Refresh**: at first, every 10 minutes, at each new day, and whenever the shopping list changes
-- **Actions**: `todo.update_item` on the shopping list, nothing else
+- **Editing (Mealie)**: offered once Mealie's `get_mealplan` answered (`edit: false` turns it off). The popup lies at the top of the card and closes when the card leaves the page, nothing saved. The search calls `mealie.get_recipes` (6 recipes, 300 ms after the last key); *Save* plans the recipe picked or, without one, the text typed as a note: `mealie.update_mealplan` on a slot Mealie already plans (a recipe replaced by a note: the entry deleted and planned again, `mealie.delete_mealplan` then `mealie.set_mealplan`), else `mealie.set_mealplan`; *Leftovers* plans a note `Leftovers: <the meal before>`; *Random* calls `mealie.set_random_mealplan` (the slot's entry deleted first); *Clear* calls `mealie.delete_mealplan`. The meal plan is fetched again after a change (also when Mealie refuses it, the popup then staying open with an error), and the search field is never redrawn while typing
+- **Actions**: `todo.update_item` on the shopping list; with Mealie, `mealie.set_mealplan`, `update_mealplan`, `set_random_mealplan` and `delete_mealplan` from the editing popup
 
 ## Development
 

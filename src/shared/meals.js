@@ -85,9 +85,29 @@ export const mlFromMealie = (resp, source) =>
         minutes: mlMinutes(r.total_time) ?? mlMinutes(r.perform_time),
         servings: mlServings(r.recipe_yield ?? r.recipe_servings),
         source,
+        // What editing needs: the entry's id (update_mealplan, delete_mealplan) and its recipe's.
+        id: e.mealplan_id ?? e.id ?? null,
+        recipe: r.recipe_id ?? r.id ?? null,
       };
     })
     .filter(Boolean);
+
+// The recipes of Mealie's get_recipes response ({ recipes: { items } }), at most `limit`.
+export const mlRecipes = (resp, limit = 6) => {
+  const r = resp?.recipes;
+  const items = Array.isArray(r) ? r : Array.isArray(r?.items) ? r.items : [];
+  return items
+    .map((x) => ({ id: x.recipe_id ?? x.id ?? null, name: x.name, minutes: mlMinutes(x.total_time) ?? mlMinutes(x.perform_time) }))
+    .filter((x) => x.id && x.name)
+    .slice(0, limit);
+};
+
+// The meal planned before `type` on `day` (the latest one, of any type), for the leftovers shortcut.
+export const mlBefore = (meals, day, type) => {
+  const rank = (m) => `${m.day}|${ML_TYPES.indexOf(m.type)}`;
+  const at = `${day}|${ML_TYPES.indexOf(type)}`;
+  return meals.filter((m) => ML_TYPES.includes(m.type) && rank(m) < at).sort((a, b) => (rank(a) < rank(b) ? 1 : -1))[0] || null;
+};
 
 // The meals of Grocy's meal plan sensor (its `meals` attribute): a recipe, a note or a product per day and section.
 export const mlFromGrocy = (st) =>

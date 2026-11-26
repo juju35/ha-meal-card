@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.0 - 2026-11-26
+
+### Features
+- Edit the meal plan from the card, with Mealie: a tap on a day of the week opens a popup at the top of the card with its meals; a meal opens the recipe search (`mealie.get_recipes`), and *Save* plans the recipe picked, or the text typed as a note (`mealie.set_mealplan`, or `mealie.update_mealplan` on a slot already planned). *Leftovers* plans a note of the meal before, *Random* a random recipe (`mealie.set_random_mealplan`), *Clear* empties the slot (`mealie.delete_mealplan`). New option `edit` (default `true`) to keep the card read only. In the 22 languages.
+
 ## 1.0.3 - 2026-11-24
 
 ### Maintenance

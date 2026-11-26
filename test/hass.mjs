@@ -20,6 +20,13 @@ export const PLAN = [
   [3, "dinner", "Ratatouille", "PT50M", "4"],
 ];
 
+// Mealie's recipes, for the editing popup's search.
+export const RECIPES = [
+  { recipe_id: "c1", name: "Chickpea curry", total_time: "PT40M" },
+  { recipe_id: "c2", name: "Chicken coconut curry", total_time: "PT45M" },
+  { recipe_id: "p1", name: "Homemade pizza", total_time: "PT1H" },
+];
+
 export const ITEMS = [
   { uid: "1", summary: "Lemons", status: "needs_action", description: "Produce" },
   { uid: "2", summary: "Courgettes", status: "needs_action", description: "Produce" },
@@ -67,9 +74,11 @@ export const makeHass = ({ ws = true, items = ITEMS, plan = PLAN, ...overrides }
       if (msg.type === "call_service" && msg.service === "get_mealplan")
         return {
           response: {
-            mealplan: plan.map(([off, type, name, time, yieldText]) => ({ mealplan_date: day(off), entry_type: type, title: "", recipe: { name, total_time: time, recipe_yield: yieldText } })),
+            mealplan: plan.map(([off, type, name, time, yieldText], i) => ({ mealplan_id: 100 + i, mealplan_date: day(off), entry_type: type, title: "", recipe: { recipe_id: `r${i}`, name, total_time: time, recipe_yield: yieldText } })),
           },
         };
+      if (msg.type === "call_service" && msg.service === "get_recipes")
+        return { response: { recipes: { items: RECIPES.filter((r) => !msg.service_data.search_terms || r.name.toLowerCase().includes(msg.service_data.search_terms.toLowerCase())) } } };
       if (msg.type === "todo/item/list") return { items: items.map((i) => ({ ...i })) };
       return null;
     };
