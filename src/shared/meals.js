@@ -71,12 +71,32 @@ export const mlFromEvent = (ev, calendar) => {
   return { day: mlDay(String(start).length === 10 ? `${start}T12:00:00` : start), type: mlType(`${calendar} ${ev.summary}`), name: ev.summary, source: calendar };
 };
 
+// Bonap (a Mealie front-end) prefixes a meal's note with markers: [s:4] servings, [c:dessert] course (none: the main
+// course), [g:…] guests, [b:freezer:2026-11-02] taken from the batch stock. `course` is the course, `note` what is
+// left, `keep` the markers to keep when the meal changes (the batch one goes: a new dish isn't from the stock).
+const ML_BONAP_MARK = /^\[(?:s:\d+|c:[a-z0-9]+|g:[^\]]*|b:(?:fridge|freezer):\d{4}-\d{2}-\d{2})\]/;
+export const mlMealText = (text) => {
+  let rest = String(text ?? "");
+  let course = "main";
+  let keep = "";
+  for (let m = rest.match(ML_BONAP_MARK); m; m = rest.match(ML_BONAP_MARK)) {
+    const mark = m[0];
+    if (mark.startsWith("[c:") && mark !== "[c:plat]") course = mark.slice(3, -1);
+    if (!mark.startsWith("[b:")) keep += mark;
+    rest = rest.slice(mark.length);
+  }
+  return { course, note: rest.trim(), keep };
+};
+
 // The meals of Mealie's get_mealplan response.
 export const mlFromMealie = (resp, source) =>
   (resp?.mealplan || [])
     .map((e) => {
       const r = e.recipe || {};
-      const name = r.name || e.title;
+      const text = e.description ?? e.text ?? "";
+      const t = mlMealText(text);
+      // A note-only meal of Bonap keeps its note in the text, not the title.
+      const name = r.name || e.title || t.note;
       if (!name || !e.mealplan_date) return null;
       return {
         day: mlDay(`${String(e.mealplan_date).slice(0, 10)}T12:00:00`),
@@ -88,6 +108,8 @@ export const mlFromMealie = (resp, source) =>
         // What editing needs: the entry's id (update_mealplan, delete_mealplan) and its recipe's.
         id: e.mealplan_id ?? e.id ?? null,
         recipe: r.recipe_id ?? r.id ?? null,
+        course: t.course,
+        text,
       };
     })
     .filter(Boolean);
@@ -102,12 +124,15 @@ export const mlRecipes = (resp, limit = 6) => {
     .slice(0, limit);
 };
 
-// The meal planned before `type` on `day` (the latest one, of any type), for the leftovers shortcut.
+// The main course planned before `type` on `day` (the latest one, of any type), for the leftovers shortcut.
 export const mlBefore = (meals, day, type) => {
   const rank = (m) => `${m.day}|${ML_TYPES.indexOf(m.type)}`;
   const at = `${day}|${ML_TYPES.indexOf(type)}`;
-  return meals.filter((m) => ML_TYPES.includes(m.type) && rank(m) < at).sort((a, b) => (rank(a) < rank(b) ? 1 : -1))[0] || null;
+  return meals.filter((m) => ML_TYPES.includes(m.type) && mlMain(m) && rank(m) < at).sort((a, b) => (rank(a) < rank(b) ? 1 : -1))[0] || null;
 };
+
+// A main course (Bonap plans a starter and a dessert in the same slot, marked in the note).
+export const mlMain = (m) => !m.course || m.course === "main";
 
 // The meals of Grocy's meal plan sensor (its `meals` attribute): a recipe, a note or a product per day and section.
 export const mlFromGrocy = (st) =>

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-11-26
+
+### Fixes
+- Meal plans written by Bonap (a Mealie front-end): a note-only meal shows its note (it was hidden); with a starter or a dessert planned in the same slot, the card shows and edits the main course, not the first entry; a meal changed from the card keeps Bonap's servings, course and guests markers.
+- *Leftovers* plans the main course before again (the same recipe, as Bonap counts leftovers), a note only for a note-only meal.
+
 ## 1.1.0 - 2026-11-26
 
 ### Features
