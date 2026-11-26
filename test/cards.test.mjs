@@ -335,7 +335,7 @@ test("editing a planned slot updates it; clear deletes it; leftovers and random"
   on = open(day(2), "lunch");
   on('[data-k="ed-left"]').click();
   await settle();
-  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "set_mealplan", { config_entry_id: "mealie1", date: day(2), entry_type: "lunch", note_title: "Leftovers: Homemade pizza" }]);
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "set_mealplan", { config_entry_id: "mealie1", date: day(2), entry_type: "lunch", recipe_id: "r5" }], "leftovers: the same recipe, as in Bonap");
   on = open(day(3), "dinner");
   on('[data-k="ed-rand"]').click();
   await settle();
@@ -388,4 +388,39 @@ test("a fetch asked for while one runs runs again once it's done", async () => {
   await settle();
   assert.equal(n(), before + 2);
   assert.equal(card._again, false);
+});
+
+test("Bonap's markers: hidden, main course first, kept when the meal changes", async () => {
+  assert.deepEqual(json(ml.mlMealText("[s:4][c:dessert][b:freezer:2026-11-02][g:Ann,Bob]Birthday")), { course: "dessert", note: "Birthday", keep: "[s:4][c:dessert][g:Ann,Bob]" });
+  assert.deepEqual(json(ml.mlMealText("Plain note")), { course: "main", note: "Plain note", keep: "" });
+  assert.equal(ml.mlMealText("[c:plat]").course, "main");
+  const resp = {
+    mealplan: [
+      { mealplan_id: 1, mealplan_date: day(0), entry_type: "dinner", title: "", description: "[c:entree]", recipe: { recipe_id: "a", name: "Leek soup" } },
+      { mealplan_id: 2, mealplan_date: day(0), entry_type: "dinner", title: "", description: "[s:6]", recipe: { recipe_id: "b", name: "Roast chicken" } },
+      { mealplan_id: 3, mealplan_date: day(1), entry_type: "dinner", title: "", description: "[s:2]Pizza with friends", recipe: null },
+    ],
+  };
+  const meals = ml.mlFromMealie(resp, "mealie1");
+  assert.deepEqual(meals.map((m) => [m.name, m.course]), [["Leek soup", "entree"], ["Roast chicken", "main"], ["Pizza with friends", "main"]]);
+  const hass = makeHass();
+  hass.callWS = async function (msg) {
+    this.ws.push(msg);
+    if (msg.service === "get_mealplan") return { response: resp };
+    return { response: { recipes: { items: [{ recipe_id: "c1", name: "Chickpea curry" }] } } };
+  };
+  hass.ws = [];
+  hass.callService = async function (domain, service, data) {
+    this.calls.push([domain, service, data]);
+  };
+  const card = await make("meal-card", {}, hass);
+  assert.equal(card._items.tonight.name, "Roast chicken", "the main course, not the starter");
+  const on = clickable(card);
+  on(`day:${day(0)}`).click();
+  clickable(card)("slot:dinner").click();
+  await settle();
+  clickable(card)("res:c1").click();
+  clickable(card)('[data-k="ed-save"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "update_mealplan", { config_entry_id: "mealie1", mealplan_id: 2, date: day(0), entry_type: "dinner", recipe_id: "c1", note_text: "[s:6]" }], "the main course, its servings kept");
 });

@@ -266,11 +266,12 @@ class MealCard extends RcCard {
     const plans = this._plans();
     const meals = [...(ws?.meals || [])];
     for (const id of plans.filter((x) => x.startsWith("sensor."))) meals.push(...mlFromGrocy(h.states[id]));
-    // The first meal of each type and day (a calendar repeating Mealie's is ignored).
+    // The first meal of each type and day (a calendar repeating Mealie's is ignored), its main course first (Bonap may
+    // plan a starter and a dessert in the same slot).
     const byDay = new Map();
     for (const m of meals) {
       const d = byDay.get(m.day) || {};
-      if (!d[m.type]) d[m.type] = m;
+      if (!d[m.type] || (mlMain(m) && !mlMain(d[m.type]))) d[m.type] = m;
       byDay.set(m.day, d);
     }
     const today = mlDay(now);
@@ -538,11 +539,15 @@ class MealCard extends RcCard {
     let what = null;
     if (kind === "save") what = e.pick ? { recipe_id: e.pick.id } : e.q.trim() ? { note_title: e.q.trim() } : null;
     if (kind === "left") {
+      // Leftovers are the meal before again (as in Bonap: the same recipe in two slots in a row); a note-only meal
+      // gives a "Leftovers: …" note, kept as it is for leftovers of leftovers.
       const before = mlBefore(m.all, e.day, e.type);
-      // Leftovers of leftovers keep the note as it is.
       const prefix = this._t("leftovers_of", { v: "" });
-      what = before ? { note_title: before.name.startsWith(prefix) ? before.name : this._t("leftovers_of", { v: before.name }) } : null;
+      what = before?.recipe ? { recipe_id: before.recipe } : before ? { note_title: before.name.startsWith(prefix) ? before.name : this._t("leftovers_of", { v: before.name }) } : null;
     }
+    // Bonap's markers of the slot's meal (servings, course, guests) stay on the new one.
+    const keep = mlMealText(meal?.text).keep;
+    if (what && keep) what.note_text = keep;
     if ((kind === "save" || kind === "left") && !what) return;
     e.busy = true;
     e.err = false;
