@@ -314,7 +314,20 @@ test("editing a planned slot updates it; clear deletes it; leftovers and random"
   on('[data-k="ed-q"]').input({ target: { value: "Pizza night" } });
   on('[data-k="ed-save"]').click();
   await settle();
-  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "update_mealplan", { config_entry_id: "mealie1", mealplan_id: 105, date: day(1), entry_type: "dinner", note_title: "Pizza night" }], "a typed text without a recipe is a note");
+  assert.deepEqual(
+    json(hass.calls.slice(-2)),
+    [
+      ["mealie", "delete_mealplan", { config_entry_id: "mealie1", mealplan_id: 105 }],
+      ["mealie", "set_mealplan", { config_entry_id: "mealie1", date: day(1), entry_type: "dinner", note_title: "Pizza night" }],
+    ],
+    "a typed text without a recipe is a note; replacing a recipe, a new entry",
+  );
+  on = open(day(0), "lunch");
+  await settle();
+  clickable(card)("res:c1").click();
+  clickable(card)('[data-k="ed-save"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "update_mealplan", { config_entry_id: "mealie1", mealplan_id: 104, date: day(0), entry_type: "lunch", recipe_id: "c1" }], "a recipe over a recipe: updated");
   on = open(day(0), "dinner");
   on('[data-k="ed-clear"]').click();
   await settle();
@@ -341,6 +354,7 @@ test("a change Mealie refuses keeps the popup open with an error; no Mealie, or 
   await settle();
   assert.equal(card._edit.err, true);
   assert.match(card.shadowRoot.innerHTML, /class="err" role="alert"/);
+  assert.ok(hass.ws.filter((w) => w.service === "get_mealplan").length >= 2, "fetched again after a refusal (a change may be half done)");
   card.disconnectedCallback();
   assert.equal(card._edit, null, "leaving the page closes the popup");
   const off = await make("meal-card", { edit: false });
@@ -360,4 +374,18 @@ test("mlRecipes and mlBefore", () => {
   assert.equal(ml.mlBefore(meals, "2026-06-25", "dinner").name, "Soup");
   assert.equal(ml.mlBefore(meals, "2026-06-25", "lunch").name, "Tacos");
   assert.equal(ml.mlBefore(meals, "2026-06-24", "breakfast"), null);
+});
+
+test("a fetch asked for while one runs runs again once it's done", async () => {
+  const hass = makeHass();
+  const card = await make("meal-card", {}, hass);
+  const n = () => hass.ws.filter((w) => w.service === "get_mealplan").length;
+  const before = n();
+  const first = card._fetch();
+  await card._fetch();
+  assert.equal(card._again, true);
+  await first;
+  await settle();
+  assert.equal(n(), before + 2);
+  assert.equal(card._again, false);
 });

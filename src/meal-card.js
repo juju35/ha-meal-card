@@ -178,8 +178,14 @@ class MealCard extends RcCard {
   // calendars' events (Mealie's are skipped once its action answered), the shopping list's items.
   async _fetch() {
     const h = this._hass;
-    if (!h?.callWS || this._busy) return;
+    if (!h?.callWS) return;
+    // A fetch asked for while one runs (a change saved meanwhile) runs again once it's done.
+    if (this._busy) {
+      this._again = true;
+      return;
+    }
     this._busy = true;
+    this._again = false;
     const now = Date.now();
     try {
       const days = this._days(now);
@@ -228,6 +234,7 @@ class MealCard extends RcCard {
     } finally {
       this._busy = false;
     }
+    if (this._again) return this._fetch();
     this._sig = null;
     this._render();
   }
@@ -424,24 +431,30 @@ class MealCard extends RcCard {
 
   // The editing popup, at the top of the card: a day's meal slots, then the chosen slot's recipe search, the leftovers
   // and random shortcuts, and clear / cancel / save. Mealie's set_mealplan, update_mealplan, set_random_mealplan and
-  // delete_mealplan actions do the change; the meal plan is fetched again after it.
+  // delete_mealplan actions do the change; the meal plan is fetched again after it. In the slot view, what changes
+  // while editing (recipes found, recipe picked, busy, error) is redrawn in `.pb` only, so the search field is never
+  // replaced: on a phone, a replaced field would close the keyboard.
   _editor(m) {
     const e = this._edit;
     if (!e) return "";
     const d = m.days.find((x) => x.key === e.day);
-    const btn = (k, icon, label, cls = "") =>
-      `<button class="eb${cls}" data-k="${k}" aria-label="${rcEsc(label)}" title="${rcEsc(label)}"${e.busy ? " disabled" : ""}>${mlIcon(icon)}</button>`;
+    const btn = (k, icon, label) => `<button class="eb" data-k="${k}" aria-label="${rcEsc(label)}" title="${rcEsc(label)}">${mlIcon(icon)}</button>`;
     const title = `${this._dayName(d.t)}${e.type ? ` · ${this._t(e.type)}` : ""}`;
     const head = `<div class="eh">${e.type ? btn("ed-back", ML_SVG.back, this._t("back")) : ""}<span class="et">${rcEsc(title)}</span>${btn("ed-close", ML_SVG.close, this._t("close"))}</div>`;
-    const err = e.err ? `<div class="err" role="alert">${rcEsc(this._t("ed_failed"))}</div>` : "";
     if (!e.type) {
       const slots = ML_TYPES.map((type) => {
         const meal = d.slots[type];
         return `<button class="slot" data-type="${type}" data-k="slot-${type}">${mlPlate(meal?.name, 32)}<span class="rt"><span class="rl">${rcEsc(this._t(type))}</span><span class="rn${meal ? "" : " none"}">${rcEsc(meal?.name || this._t("nothing_day"))}</span></span>${mlIcon(ML_SVG.pen)}</button>`;
       }).join("");
-      return `<div class="pop" role="dialog" aria-label="${rcEsc(title)}">${head}${slots}${err}</div>`;
+      return `<div class="pop" role="dialog" aria-label="${rcEsc(title)}">${head}${slots}</div>`;
     }
+    return `<div class="pop" role="dialog" aria-label="${rcEsc(title)}">${head}<input class="q" data-k="ed-q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${rcEsc(this._t("ed_search"))}" aria-label="${rcEsc(this._t("ed_search"))}" value="${rcEsc(e.q)}"><div class="pb">${this._editorBody(m, e, d)}</div></div>`;
+  }
+
+  // The slot view below the search field: the recipes found, the shortcuts, the error and the actions.
+  _editorBody(m, e, d) {
     const meal = this._mealieMeal(m, d, e.type);
+    const off = e.busy ? " disabled" : "";
     const results =
       e.results == null
         ? `<div class="nothing">…</div>`
@@ -449,16 +462,16 @@ class MealCard extends RcCard {
           ? e.results
               .map(
                 (r) =>
-                  `<button class="res${e.pick?.id === r.id ? " sel" : ""}" data-rid="${rcEsc(r.id)}" data-k="res-${rcEsc(r.id)}" aria-pressed="${e.pick?.id === r.id}">${mlPlate(r.name, 28)}<span class="in">${rcEsc(r.name)}</span>${r.minutes != null ? `<span class="ia">${rcEsc(this._dur(r.minutes))}</span>` : ""}</button>`,
+                  `<button class="res${e.pick?.id === r.id ? " sel" : ""}" data-rid="${rcEsc(r.id)}" aria-pressed="${e.pick?.id === r.id}">${mlPlate(r.name, 28)}<span class="in">${rcEsc(r.name)}</span>${r.minutes != null ? `<span class="ia">${rcEsc(this._dur(r.minutes))}</span>` : ""}</button>`,
               )
               .join("")
           : `<div class="nothing">${rcEsc(this._t("no_recipe"))}</div>`;
-    const before = mlBefore(m.all, e.day, e.type);
-    const chip = (k, icon, label) => `<button class="chip" data-k="${k}"${e.busy ? " disabled" : ""}>${mlIcon(icon)}<span>${rcEsc(label)}</span></button>`;
-    const chips = `<div class="chips">${before ? chip("ed-left", ML_SVG.left, this._t("leftovers")) : ""}${chip("ed-rand", ML_SVG.dice, this._t("random"))}</div>`;
+    const chip = (k, icon, label) => `<button class="chip" data-k="${k}"${off}>${mlIcon(icon)}<span>${rcEsc(label)}</span></button>`;
+    const chips = `<div class="chips">${mlBefore(m.all, e.day, e.type) ? chip("ed-left", ML_SVG.left, this._t("leftovers")) : ""}${chip("ed-rand", ML_SVG.dice, this._t("random"))}</div>`;
+    const err = e.err ? `<div class="err" role="alert">${rcEsc(this._t("ed_failed"))}</div>` : "";
     const can = !e.busy && (e.pick || e.q.trim());
-    const acts = `<div class="acts">${meal ? `<button class="act danger" data-k="ed-clear"${e.busy ? " disabled" : ""}>${rcEsc(this._t("clear"))}</button>` : ""}<span class="sp"></span><button class="act" data-k="ed-back">${rcEsc(this._t("cancel"))}</button><button class="act acc" data-k="ed-save"${can ? "" : " disabled"}>${rcEsc(this._t("save"))}</button></div>`;
-    return `<div class="pop" role="dialog" aria-label="${rcEsc(title)}">${head}<input class="q" data-k="ed-q" type="search" enterkeyhint="search" autocomplete="off" placeholder="${rcEsc(this._t("ed_search"))}" aria-label="${rcEsc(this._t("ed_search"))}" value="${rcEsc(e.q)}"><div class="list">${results}</div>${chips}${err}${acts}</div>`;
+    const acts = `<div class="acts">${meal ? `<button class="act danger" data-k="ed-clear"${off}>${rcEsc(this._t("clear"))}</button>` : ""}<span class="sp"></span><button class="act" data-k="ed-cancel"${off}>${rcEsc(this._t("cancel"))}</button><button class="act acc" data-k="ed-save"${can ? "" : " disabled"}>${rcEsc(this._t("save"))}</button></div>`;
+    return `<div class="list">${results}</div>${chips}${err}${acts}`;
   }
 
   // The Mealie entry planned on day `d` for `type` (one the card can update or delete), else null.
@@ -470,6 +483,26 @@ class MealCard extends RcCard {
   _redraw() {
     this._sig = null;
     this._render();
+  }
+
+  // Redraws the slot view below the search field, in place; the whole card when it isn't on screen.
+  _refreshEditor() {
+    const root = this.shadowRoot;
+    const pb = root?.querySelector(".pop .pb");
+    const e = this._edit;
+    const d = this._items?.days.find((x) => x.key === e?.day);
+    if (!pb?.isConnected || !e?.type || !d) return this._redraw();
+    pb.innerHTML = this._editorBody(this._items, e, d);
+    this._bindEditorBody(pb);
+    this._fitPop();
+  }
+
+  // The card is at least as tall as the popup (it clips what overflows it).
+  _fitPop() {
+    const pop = this.shadowRoot?.querySelector(".pop");
+    const card = this.shadowRoot?.querySelector("ha-card");
+    if (!card?.style) return;
+    card.style.minHeight = pop?.offsetHeight ? `${pop.offsetHeight + 20}px` : "";
   }
 
   // The recipes matching the search field (Mealie's get_recipes); the latest search wins.
@@ -486,13 +519,13 @@ class MealCard extends RcCard {
       .then((results) => {
         if (seq !== this._searchSeq || this._edit !== e) return;
         e.results = results;
-        this._redraw();
+        this._refreshEditor();
       });
   }
 
   // A change to the slot being edited: `kind` save (the recipe picked, else the search field as a note), left (a
-  // "Leftovers: …" note of the meal before), rand (a random recipe) or clear. The popup closes once Mealie took it, and stays open with
-  // an error otherwise.
+  // "Leftovers: …" note of the meal before), rand (a random recipe) or clear. The popup closes once Mealie took it,
+  // and stays open with an error otherwise; the meal plan is fetched again either way (a change may be half done).
   async _apply(kind) {
     const e = this._edit;
     const m = this._items;
@@ -506,29 +539,34 @@ class MealCard extends RcCard {
     if (kind === "save") what = e.pick ? { recipe_id: e.pick.id } : e.q.trim() ? { note_title: e.q.trim() } : null;
     if (kind === "left") {
       const before = mlBefore(m.all, e.day, e.type);
-      what = before ? { note_title: this._t("leftovers_of", { v: before.name }) } : null;
+      // Leftovers of leftovers keep the note as it is.
+      const prefix = this._t("leftovers_of", { v: "" });
+      what = before ? { note_title: before.name.startsWith(prefix) ? before.name : this._t("leftovers_of", { v: before.name }) } : null;
     }
     if ((kind === "save" || kind === "left") && !what) return;
     e.busy = true;
     e.err = false;
-    this._redraw();
+    this._refreshEditor();
+    let ok = true;
     try {
       if (kind === "clear") await call("delete_mealplan", { mealplan_id: meal.id });
       else if (kind === "rand") {
         if (meal) await call("delete_mealplan", { mealplan_id: meal.id });
         await call("set_random_mealplan", slot);
-      } else if (meal) await call("update_mealplan", { mealplan_id: meal.id, ...slot, ...what });
-      else await call("set_mealplan", { ...slot, ...what });
-    } catch {
-      if (this._edit === e) {
-        e.busy = false;
-        e.err = true;
-        this._redraw();
+      } else if (meal && (what.recipe_id || !meal.recipe)) await call("update_mealplan", { mealplan_id: meal.id, ...slot, ...what });
+      else {
+        // A recipe replaced by a note: a new entry, as an update might keep the recipe attached.
+        if (meal) await call("delete_mealplan", { mealplan_id: meal.id });
+        await call("set_mealplan", { ...slot, ...what });
       }
-      return;
+    } catch {
+      ok = false;
     }
-    if (this._edit === e) this._edit = null;
-    this._ws = this._ws && { ...this._ws, at: 0 };
+    if (this._edit === e) {
+      if (ok) this._edit = null;
+      else Object.assign(e, { busy: false, err: true });
+    }
+    if (!ok) this._refreshEditor();
     await this._fetch();
   }
 
@@ -541,15 +579,15 @@ class MealCard extends RcCard {
         this._redraw();
       });
     if (!e) return;
-    const on = (k, fn) => root.querySelector(`[data-k="${k}"]`)?.addEventListener("click", fn);
-    on("ed-close", () => {
+    this._fitPop();
+    const close = () => {
       this._edit = null;
       this._redraw();
-    });
-    on("ed-back", () => {
-      if (e.busy) return;
-      Object.assign(e, { type: null, q: "", results: null, pick: null, err: false });
-      this._redraw();
+    };
+    root.querySelector('[data-k="ed-close"]')?.addEventListener("click", close);
+    root.querySelector('[data-k="ed-back"]')?.addEventListener("click", () => this._back());
+    root.querySelector(".pop")?.addEventListener("keydown", (ev) => {
+      if (ev.key === "Escape") close();
     });
     for (const b of root.querySelectorAll(".slot[data-type]") || [])
       b.addEventListener("click", () => {
@@ -557,28 +595,39 @@ class MealCard extends RcCard {
         this._redraw();
         this._search();
       });
-    for (const b of root.querySelectorAll(".res[data-rid]") || [])
-      b.addEventListener("click", () => {
-        const r = e.results?.find((x) => x.id === b.dataset.rid);
-        e.pick = e.pick?.id === r?.id ? null : r || null;
-        this._redraw();
-      });
     const q = root.querySelector('[data-k="ed-q"]');
     q?.addEventListener("input", (ev) => {
       e.q = ev.target?.value ?? "";
       e.pick = null;
-      const save = root.querySelector('[data-k="ed-save"]');
-      if (save) save.disabled = !e.q.trim();
+      this._refreshEditor();
       clearTimeout(this._searchTimer);
       this._searchTimer = setTimeout(() => this._search(), ML_SEARCH_WAIT);
     });
     q?.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") this._apply("save");
-      if (ev.key === "Escape") {
-        this._edit = null;
-        this._redraw();
-      }
     });
+    if (e.type) this._bindEditorBody(root);
+  }
+
+  // Back to the day's meals (not while a change is on its way).
+  _back() {
+    const e = this._edit;
+    if (!e || e.busy) return;
+    Object.assign(e, { type: null, q: "", results: null, pick: null, err: false });
+    this._redraw();
+  }
+
+  // The controls of the slot view below the search field.
+  _bindEditorBody(root) {
+    const e = this._edit;
+    for (const b of root.querySelectorAll(".res[data-rid]") || [])
+      b.addEventListener("click", () => {
+        const r = e.results?.find((x) => String(x.id) === b.dataset.rid);
+        e.pick = e.pick && e.pick.id === r?.id ? null : r || null;
+        this._refreshEditor();
+      });
+    const on = (k, fn) => root.querySelector(`[data-k="${k}"]`)?.addEventListener("click", fn);
+    on("ed-cancel", () => this._back());
     on("ed-save", () => this._apply("save"));
     on("ed-left", () => this._apply("left"));
     on("ed-rand", () => this._apply("rand"));
@@ -589,7 +638,7 @@ class MealCard extends RcCard {
     const c = this._config;
     const status = this._t(`st_${m.state}`);
     if (this._edit && (!m.edit || !m.days.some((d) => d.key === this._edit.day))) this._edit = null;
-    const parts = [m.state, m.tonight, m.lunch, m.tomorrow, m.days, m.shown, m.open, m.edit, this._edit, this._night(), this._dark()];
+    const parts = [m.state, m.tonight, m.lunch, m.tomorrow, m.days, m.shown, m.open, m.edit, this._edit && `${this._edit.day}|${this._edit.type}`, this._night(), this._dark()];
     if (!this._changed(parts)) return;
     const sub = this._sub(m);
     const subHtml = c.show_subtitle !== false && sub ? `<div class="subt">${rcEsc(sub)}</div>` : "";
@@ -600,7 +649,7 @@ class MealCard extends RcCard {
             <div class="badge"><ha-icon icon="${ML_ICONS[m.state]}"></ha-icon></div>
             <div class="tt"><div class="trow"><div class="title">${rcEsc(m.name)}</div>${m.none ? "" : `<span class="pill" title="${rcEsc(status)}" aria-label="${rcEsc(status)}"><span class="pt">${rcEsc(status)}</span></span>`}</div>${subHtml}</div>
           </div>`;
-    const dk = `${this._dark() ? " dk" : ""}${this._edit ? " editing" : ""}`;
+    const dk = this._dark() ? " dk" : "";
     if (m.none) {
       this._paint("empty", `${head}<div class="box nothing">${rcEsc(this._t("none"))}</div>`, "", dk);
       this._fitPill();
@@ -696,7 +745,6 @@ class MealCard extends RcCard {
     .ia { font-size: 12px; color: var(--secondary-text-color); white-space: nowrap; }
     /* Editing (Mealie): the days are buttons; the popup lies over the top of the card. */
     ha-card { position: relative; }
-    ha-card.editing { min-height: 400px; }
     button.day { font: inherit; color: inherit; border: 0; margin: 0; cursor: pointer; }
     button.day:hover { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ml-acc) 45%, transparent); }
     button.day:focus-visible, .pop button:focus-visible, .q:focus-visible { outline: 2px solid var(--primary-color); outline-offset: 2px; }
@@ -717,6 +765,7 @@ class MealCard extends RcCard {
     .rn.none { font-weight: 400; color: var(--secondary-text-color); }
     .q { box-sizing: border-box; width: 100%; height: 40px; padding: 0 12px; border-radius: 10px; font: inherit; font-size: 14px; color: var(--primary-text-color);
          border: 1px solid var(--divider-color, rgba(127,127,127,.3)); background: var(--card-background-color, #fff); }
+    .pb { display: flex; flex-direction: column; gap: 6px; }
     .list { display: flex; flex-direction: column; gap: 4px; }
     .list .nothing { padding: 8px 4px; }
     .chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -842,6 +891,8 @@ class MealMiniCard extends rcMini(MealCard, "meal-mini-card", "") {
   }
 
   _drawMini(m) {
+    // Folded back: the editing popup closes, nothing saved.
+    this._edit = null;
     const night = this._night();
     if (!this._changed(["mini", m.state, m.tonight?.name, m.tomorrow?.name, m.open, !!m.items, night, this._dark()])) return;
     const status = this._t(`st_${m.state}`);
