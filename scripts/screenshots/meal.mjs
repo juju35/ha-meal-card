@@ -5,11 +5,12 @@ import { pageScript, setup } from "./mock.mjs";
 
 // Stills: animations: false keeps the steam where it is, so a capture only changes when the card does.
 const still = (file, s) => pair(file, { ...s, config: { animations: false, ...s.config } });
+// The editing popup (Mealie): ml-edit-day (a day's meals) and ml-edit-recipe (the recipe search for its dinner).
 const ws = pageScript();
 await shoot({
   prefix: "ml",
   tag: "meal-card",
-  shots: [...still("planned", { scene: "planned" }), ...still("unplanned", { scene: "unplanned" }), ...still("done", { scene: "done", config: { days: "next7" } }), ...still("narrow", { scene: "planned", width: 300 })],
+  shots: [...still("planned", { scene: "planned" }), ...still("unplanned", { scene: "unplanned" }), ...still("done", { scene: "done", config: { days: "next7" } }), ...still("narrow", { scene: "planned", width: 300 }), ...still("edit-day", { scene: "planned", open: `.day[data-day="2026-06-27"]` }), ...still("edit-recipe", { scene: "planned", open: [`.day[data-day="2026-06-27"]`, `.slot[data-type="dinner"]`] })],
   setup,
   ws,
 });

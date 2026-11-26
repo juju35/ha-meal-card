@@ -108,10 +108,10 @@ export const openServedPage = async (browser, { theme, width, icons = {}, script
   return page;
 };
 
-// Creates the card in the page, with `open` (a selector) clicked once rendered.
+// Creates the card in the page, with `open` (a selector, or a list of them) clicked once rendered.
 export const mountCard = (page, { tag, hass, config, dark = false, open = null }) =>
   page.evaluate(
-    ({ tag, hass, config, dark, open }) => {
+    async ({ tag, hass, config, dark, open }) => {
       const el = document.createElement(tag);
       el.setConfig({ type: `custom:${tag}`, ...config });
       el.hass = {
@@ -124,7 +124,12 @@ export const mountCard = (page, { tag, hass, config, dark = false, open = null }
       };
       document.getElementById("root").appendChild(el);
       // A mouse click (detail 1), not a keyboard one: no focus ring left in the shot.
-      if (open) el.shadowRoot.querySelector(open).dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
+      // `open` may be a list: each selector clicked in turn (a popup, then a control inside it).
+      // Each is waited for (2 s at most): a control drawn once the card's data came back.
+      for (const sel of open ? [].concat(open) : []) {
+        for (let i = 0; i < 40 && !el.shadowRoot.querySelector(sel); i++) await new Promise((r) => setTimeout(r, 50));
+        el.shadowRoot.querySelector(sel).dispatchEvent(new MouseEvent("click", { bubbles: true, composed: true, detail: 1 }));
+      }
     },
     { tag, hass, config, dark, open },
   );

@@ -245,3 +245,119 @@ test("the editor writes only what differs from the defaults", () => {
   form.listeners["value-changed"]({ detail: { value: { type: "custom:meal-card", days: "week", shopping_limit: 8, show_week: true, shopping_list: "todo.mealie_shopping_list" } } });
   assert.deepEqual(json(out), { type: "custom:meal-card", shopping_list: "todo.mealie_shopping_list" });
 });
+
+// ── Editing (Mealie) ──────────────────────────────────────────────────────────
+// A card whose shadow root keeps the nodes of every selector, so a test can click what the card bound.
+const clickable = (card) => {
+  const nodes = {};
+  const node = (key, dataset = {}) => (nodes[key] ||= { ...fakeNode(), dataset, value: "" });
+  card.shadowRoot.querySelector = (s) => node(s);
+  card.shadowRoot.querySelectorAll = (s) => {
+    const html = card.shadowRoot.innerHTML;
+    if (s === ".day[data-day]") return [...html.matchAll(/data-day="([^"]+)"/g)].map(([, d]) => node(`day:${d}`, { day: d }));
+    if (s === ".slot[data-type]") return [...html.matchAll(/data-type="([^"]+)"/g)].map(([, t]) => node(`slot:${t}`, { type: t }));
+    if (s === ".res[data-rid]") return [...html.matchAll(/data-rid="([^"]+)"/g)].map(([, r]) => node(`res:${r}`, { rid: r }));
+    return [];
+  };
+  return (key) => {
+    card._bindAfter(card.shadowRoot);
+    return nodes[key]?.listeners;
+  };
+};
+
+test("the editing popup: a day's slots, a recipe searched, picked and saved with set_mealplan", async () => {
+  const hass = makeHass();
+  hass.callService = async function (domain, service, data) {
+    this.calls.push([domain, service, data]);
+  };
+  const card = await make("meal-card", {}, hass);
+  assert.equal(card._items.edit, true, "Mealie answered: editable");
+  assert.match(card.shadowRoot.innerHTML, /<button class="day past" data-day="2026-06-22"/);
+  const on = clickable(card);
+  on(`day:${day(2)}`).click();
+  let html = card.shadowRoot.innerHTML;
+  assert.match(html, /class="pop" role="dialog"/);
+  assert.equal((html.match(/class="slot"/g) || []).length, 4, "breakfast, lunch, dinner, side");
+  on("slot:dinner").click();
+  await settle();
+  html = card.shadowRoot.innerHTML;
+  assert.match(html, /data-rid="c1"/);
+  assert.match(html, /data-k="ed-left"/, "the meal before can be had as leftovers");
+  on('[data-k="ed-q"]').input({ target: { value: "coco" } });
+  await new Promise((r) => setTimeout(r, 350));
+  await settle();
+  html = card.shadowRoot.innerHTML;
+  assert.doesNotMatch(html, /data-rid="c1"/);
+  assert.match(html, /data-rid="c2"/);
+  on("res:c2").click();
+  assert.match(card.shadowRoot.innerHTML, /class="res sel" data-rid="c2"/);
+  on('[data-k="ed-save"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "set_mealplan", { config_entry_id: "mealie1", date: day(2), entry_type: "dinner", recipe_id: "c2" }]);
+  assert.equal(card._edit, null, "closed once saved");
+  assert.ok(hass.ws.filter((w) => w.service === "get_mealplan").length >= 2, "the meal plan fetched again");
+});
+
+test("editing a planned slot updates it; clear deletes it; leftovers and random", async () => {
+  const hass = makeHass();
+  hass.callService = async function (domain, service, data) {
+    this.calls.push([domain, service, data]);
+  };
+  const card = await make("meal-card", {}, hass);
+  const open = (d, type) => {
+    const on = clickable(card);
+    on(`day:${d}`).click();
+    on(`slot:${type}`).click();
+    return clickable(card);
+  };
+  let on = open(day(1), "dinner");
+  on('[data-k="ed-q"]').input({ target: { value: "Pizza night" } });
+  on('[data-k="ed-save"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "update_mealplan", { config_entry_id: "mealie1", mealplan_id: 105, date: day(1), entry_type: "dinner", note_title: "Pizza night" }], "a typed text without a recipe is a note");
+  on = open(day(0), "dinner");
+  on('[data-k="ed-clear"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "delete_mealplan", { config_entry_id: "mealie1", mealplan_id: 103 }]);
+  on = open(day(2), "lunch");
+  on('[data-k="ed-left"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.at(-1)), ["mealie", "set_mealplan", { config_entry_id: "mealie1", date: day(2), entry_type: "lunch", note_title: "Leftovers: Homemade pizza" }]);
+  on = open(day(3), "dinner");
+  on('[data-k="ed-rand"]').click();
+  await settle();
+  assert.deepEqual(json(hass.calls.slice(-2).map((c) => c[1])), ["delete_mealplan", "set_random_mealplan"]);
+});
+
+test("a change Mealie refuses keeps the popup open with an error; no Mealie, or edit: false, no editing", async () => {
+  const hass = makeHass();
+  hass.callService = () => Promise.reject(new Error("refused"));
+  const card = await make("meal-card", {}, hass);
+  const on = clickable(card);
+  on(`day:${day(2)}`).click();
+  clickable(card)("slot:dinner").click();
+  await settle();
+  clickable(card)('[data-k="ed-rand"]').click();
+  await settle();
+  assert.equal(card._edit.err, true);
+  assert.match(card.shadowRoot.innerHTML, /class="err" role="alert"/);
+  card.disconnectedCallback();
+  assert.equal(card._edit, null, "leaving the page closes the popup");
+  const off = await make("meal-card", { edit: false });
+  assert.equal(off._items.edit, false);
+  assert.doesNotMatch(off.shadowRoot.innerHTML, /data-day=/);
+  const cal = await make("meal-card", {}, makeHass({ ws: false }));
+  assert.equal(cal._items.edit, false, "calendars only: read only");
+});
+
+test("mlRecipes and mlBefore", () => {
+  assert.deepEqual(json(ml.mlRecipes({ recipes: { items: [{ recipe_id: "a", name: "A", total_time: "PT10M" }, { name: "no id" }] } })), [{ id: "a", name: "A", minutes: 10 }]);
+  const meals = [
+    { day: "2026-06-24", type: "dinner", name: "Tacos" },
+    { day: "2026-06-25", type: "lunch", name: "Soup" },
+    { day: "2026-06-25", type: "dinner", name: "Chicken" },
+  ];
+  assert.equal(ml.mlBefore(meals, "2026-06-25", "dinner").name, "Soup");
+  assert.equal(ml.mlBefore(meals, "2026-06-25", "lunch").name, "Tacos");
+  assert.equal(ml.mlBefore(meals, "2026-06-24", "breakfast"), null);
+});
