@@ -12,6 +12,7 @@
 
 <p align="center">
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="24">&nbsp;&nbsp;
+  <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/bonap.png" alt="Bonap" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/grocy.png" alt="Grocy" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/kitchenowl.png" alt="KitchenOwl" height="24">&nbsp;&nbsp;
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/cookidoo.png" alt="Cookidoo" height="24">&nbsp;&nbsp;
@@ -19,13 +20,13 @@
   <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/ourgroceries.png" alt="OurGroceries" height="24">
 </p>
 
-A Lovelace card for **the week's meal plan** and the **shopping list**: tonight's dinner at a glance, today's lunch, the week day by day as plates, and the shopping list to tick off.
+A Lovelace card for **the week's meal plan** and the **shopping list**: tonight's dinner at a glance, today's lunch, the week day by day as plates, and the shopping list to tick off. With Mealie, the week's meals can be planned, changed or cleared right from the card.
 
 [![Open your Home Assistant instance and open a repository inside the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/marketplace_repository/?owner=juju35&repository=ha-meal-card&category=plugin)
 
 | Card | Type | What it shows |
 |---|---|---|
-| [Meal](#screenshots) | `custom:meal-card` | Tonight's dinner with its time and servings, today's lunch, the week as plates, and the shopping list to tick off. |
+| [Meal](#screenshots) | `custom:meal-card` | Tonight's dinner with its time and servings, today's lunch, the week as plates (a tap on a day edits its meals, with Mealie), and the shopping list to tick off. |
 | [Meal mini](#meal-mini) | `custom:meal-mini-card` | Tonight's dinner and what is left to buy on two lines, with a zoom to the full card. |
 
 | Dinner planned | Nothing tonight |
@@ -45,11 +46,12 @@ A Lovelace card for **the week's meal plan** and the **shopping list**: tonight'
 
 ## Supported integrations
 
-The card reads the meal plans of these integrations (Mealie's meal plan action, Mealie's and Cookidoo's calendars, Grocy's meal plan sensor, and any calendar listed in `meal_plan`), and takes any `todo` list for the shopping:
+The card reads the meal plans of these integrations (Mealie's meal plan action, Mealie's and Cookidoo's calendars, Grocy's meal plan sensor, and any calendar listed in `meal_plan`), and takes any `todo` list for the shopping; it edits the meal plan through Mealie's actions:
 
 | | Integration | What the cards show |
 |:---:|---|---|
-| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="16"> | [Mealie](https://www.home-assistant.io/integrations/mealie/) (built in) | Meal plan, recipes and shopping lists |
+| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/mealie.png" alt="Mealie" height="16"> | [Mealie](https://www.home-assistant.io/integrations/mealie/) (built in) | Meal plan (read and edited from the card), recipes and shopping lists |
+| <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/bonap.png" alt="Bonap" height="16"> | [Bonap](https://github.com/AymericLeFeyer/bonap) (Home Assistant app, through Mealie) | The meal plan planned in Bonap, read and edited through Mealie |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/grocy.png" alt="Grocy" height="16"> | [Grocy](https://github.com/custom-components/grocy) (Marketplace) | Meal plan, stock and shopping list |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/kitchenowl.png" alt="KitchenOwl" height="16"> | [KitchenOwl](https://github.com/TomBursch/kitchenowl-ha) (Marketplace) | Shopping list |
 | <img src="https://raw.githubusercontent.com/juju35/ha-meal-card/main/images/cookidoo.png" alt="Cookidoo" height="16"> | [Cookidoo](https://www.home-assistant.io/integrations/cookidoo/) (built in) | Thermomix recipes, calendar and shopping list |
